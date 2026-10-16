@@ -1,0 +1,203 @@
+/* Colors from team5419.org (Berkelium) */
+:root {
+	color-scheme: dark;
+	--bg: #0b0808;
+	--muted: #1b1716;
+	--border: #2d2727;
+	--fg: #f3f1ee;
+	--fg-muted: #9c9793;
+	--primary: #cc2823;
+	--primary-hover: #e0322c;
+	--primary-soft: #f0645a;
+
+	--font-display: 'Staatliches', system-ui, sans-serif;
+	--font-body: 'Open Sans', system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	font-family: var(--font-body);
+	line-height: 1.55;
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	color: inherit;
+}
+
+h1,
+h2 {
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1.15;
+	margin: 0 0 0.5rem;
+}
+
+h1 {
+	font-size: 2rem;
+}
+
+h2 {
+	font-size: 1.15rem;
+}
+
+.container {
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 0 16px;
+}
+
+.page {
+	padding-top: 3rem;
+	padding-bottom: 4rem;
+}
+
+.muted {
+	color: var(--fg-muted);
+}
+
+.mono {
+	font-family: var(--font-mono);
+}
+
+/* Difficulty label */
+.level {
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--fg-muted);
+}
+
+.level.hard {
+	color: var(--primary-soft);
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	background: var(--primary);
+	color: #fff;
+	border: 1px solid var(--primary);
+	border-radius: 6px;
+	padding: 0.55rem 1rem;
+	font: 600 0.9rem var(--font-body);
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.btn:hover {
+	background: var(--primary-hover);
+}
+
+.btn.ghost {
+	background: transparent;
+	border-color: var(--border);
+	color: var(--fg);
+}
+
+.btn.ghost:hover {
+	border-color: var(--fg-muted);
+}
+
+.btn.small {
+	padding: 0.3rem 0.7rem;
+	font-size: 0.85rem;
+}
+
+button.link {
+	background: none;
+	border: 0;
+	padding: 0;
+	color: var(--fg-muted);
+	font: inherit;
+	font-size: 0.9rem;
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+button.link:hover {
+	color: var(--fg);
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95rem;
+}
+
+th,
+td {
+	text-align: left;
+	padding: 0.6rem 0.5rem;
+	border-bottom: 1px solid var(--border);
+}
+
+th {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--fg-muted);
+}
+
+td.time {
+	font-family: var(--font-mono);
+}
+
+.table-wrap {
+	overflow-x: auto;
+}
+
+label {
+	display: block;
+	font-size: 0.85rem;
+	font-weight: 600;
+	margin-bottom: 0.3rem;
+}
+
+input,
+select,
+textarea {
+	width: 100%;
+	background: transparent;
+	color: var(--fg);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	padding: 0.55rem 0.7rem;
+	font: inherit;
+}
+
+select option,
+select optgroup {
+	background: var(--bg);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+	outline: none;
+	border-color: var(--fg-muted);
+}
+
+:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+}
+
+.error {
+	color: var(--primary-soft);
+	font-size: 0.85rem;
+	margin: 0.3rem 0 0;
+}
+
+code {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+}
