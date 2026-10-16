@@ -6,11 +6,12 @@ Built with SvelteKit + Bun, using the colors and logo from [team5419.org](https:
 ## Run it
 
 ```bash
-cd assets
-bun install
-cp .env.example .env   # then set ADMIN_PASSWORD
-bun run dev
+bun run setup                          # installs packages in assets/
+cp assets/.env.example assets/.env     # then set ADMIN_PASSWORD
+bun run dev                            # http://localhost:5173
 ```
+
+The app lives in `assets/`; the root `package.json` just forwards `dev`, `build`, `preview` and `check` to it.
 
 ## Pages
 

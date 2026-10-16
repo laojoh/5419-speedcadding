@@ -1,0 +1,11 @@
+{
+	"name": "5419-speedcadding",
+	"private": true,
+	"scripts": {
+		"setup": "bun install --cwd assets",
+		"dev": "bun run --cwd=assets dev",
+		"build": "bun run --cwd=assets build",
+		"preview": "bun run --cwd=assets preview",
+		"check": "bun run --cwd=assets check"
+	}
+}
