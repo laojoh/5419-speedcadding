@@ -17,7 +17,7 @@ bun run dev
 - `/` – this week's challenges
 - `/archive` – past weeks; still open for new runs
 - `/challenges/<id>` – the drawing(s), optional CAD link, and the full leaderboard split into runs during the week and after it
-- `/rankings` – top 3 for every challenge, grouped by Easy / Medium / Hard
+- `/rankings` – for every challenge, grouped by Easy / Medium / Hard: the top 3 from runs during its week, plus the all-time best
 - `/submit` – submit a run (challenge, name, team, time, video link)
 - `/admin` – log in with `ADMIN_PASSWORD`
   - **Runs**: approve or reject submissions. Only approved runs count.

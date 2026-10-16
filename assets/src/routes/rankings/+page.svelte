@@ -10,7 +10,7 @@
 
 <div class="container page">
 	<h1>Rankings</h1>
-	<p class="muted">Top 3 for every challenge. Click one for the full leaderboard.</p>
+	<p class="muted">Top 3 during each challenge’s week, plus the all-time best. Click one for the full leaderboard.</p>
 
 	{#each data.categories as cat (cat.id)}
 		<section>
@@ -19,7 +19,7 @@
 				<p class="muted">No {cat.label.toLowerCase()} challenges yet.</p>
 			{:else}
 				<div class="grid">
-					{#each cat.challenges as { challenge: c, top } (c.id)}
+					{#each cat.challenges as { challenge: c, top, allTime } (c.id)}
 						<a class="board" href="/challenges/{c.id}#leaderboard">
 							<div class="board-head">
 								<span class="title">{c.title}</span>
@@ -42,6 +42,15 @@
 									</li>
 								{/each}
 							</ol>
+							<div class="all-time">
+								<span class="muted">All-time</span>
+								{#if allTime}
+									<span class="who">{allTime.name}</span>
+									<span class="time mono">{formatTime(allTime.timeMs)}</span>
+								{:else}
+									<span class="who muted">—</span>
+								{/if}
+							</div>
 							<span class="full muted">Full leaderboard →</span>
 						</a>
 					{/each}
@@ -145,5 +154,14 @@
 
 	li.first .time {
 		color: var(--primary-soft);
+	}
+
+	.all-time {
+		display: flex;
+		align-items: baseline;
+		gap: 0.75rem;
+		padding: 0.45rem 0;
+		border-top: 1px solid var(--border);
+		font-size: 0.9rem;
 	}
 </style>

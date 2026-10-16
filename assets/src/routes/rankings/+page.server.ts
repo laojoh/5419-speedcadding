@@ -1,16 +1,19 @@
 import { DIFFICULTIES } from '#lib/challenges.ts';
-import { leaderboard, listChallenges, listSubmissions } from '#lib/server/db.ts';
+import { duringWeek, leaderboard, listChallenges, listSubmissions, weekEnd } from '#lib/server/db.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
 	const [challenges, submissions] = await Promise.all([listChallenges(), listSubmissions('approved')]);
-	return {
-		categories: DIFFICULTIES.map((d) => ({
-			...d,
-			// listChallenges is newest week first
-			challenges: challenges
-				.filter((c) => c.difficulty === d.id)
-				.map((c) => ({ challenge: c, top: leaderboard(submissions, c.id).slice(0, 3) }))
+	const boards = await Promise.all(
+		challenges.map(async (c) => ({
+			challenge: c,
+			// Top 3 only counts runs from the challenge's week; all-time best counts everything.
+			top: leaderboard(submissions, c.id, duringWeek(await weekEnd(c))).slice(0, 3),
+			allTime: leaderboard(submissions, c.id)[0] ?? null
 		}))
+	);
+	return {
+		// listChallenges is newest week first
+		categories: DIFFICULTIES.map((d) => ({ ...d, challenges: boards.filter((b) => b.challenge.difficulty === d.id) }))
 	};
 };
