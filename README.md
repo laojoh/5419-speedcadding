@@ -19,9 +19,12 @@ The app lives in `assets/`; the root `package.json` just forwards `dev`, `build`
 - `/archive` – past weeks; still open for new runs
 - `/challenges/<id>` – the drawing(s), optional CAD link, and the full leaderboard split into runs during the week and after it
 - `/rankings` – for every challenge, grouped by Easy / Medium / Hard: the top 3 from runs during its week, plus the all-time best
-- `/submit` – submit a run (challenge, name, team, time, video link)
+- `/submit` – video rules (when to start/stop recording, trimming in YouTube Studio), then the form at `/submit/form`. YouTube links only.
 - `/admin` – log in with `ADMIN_PASSWORD`
-  - **Runs**: approve or reject submissions. Only approved runs count.
+  - **Runs**: approve or reject submissions. Only approved runs count. Each run has a timing tool:
+    step through the YouTube video frame by frame, mark the start (sketch opens) and end (last
+    line, mate or number), and approve with that as the official time. The runner's own time is kept
+    as "claimed".
   - **Challenges**: upload new challenges (name, difficulty, week, technical drawing, optional assembly
     drawing, optional CAD link), edit or delete them.
 

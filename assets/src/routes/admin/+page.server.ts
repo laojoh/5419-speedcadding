@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { isAdmin, logIn, logOut, requireAdmin } from '#lib/server/auth.ts';
 import { deleteSubmission, listChallenges, listSubmissions, setStatus } from '#lib/server/db.ts';
+import { parseTime } from '#lib/time.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -29,7 +30,13 @@ export const actions = {
 	},
 	approve: async ({ request, cookies }) => {
 		requireAdmin(cookies);
-		await setStatus(await idFrom(request), 'approved');
+		const form = await request.formData();
+		const id = String(form.get('id') ?? '');
+		// Official time from the timing tool; blank keeps the runner's own time.
+		const time = String(form.get('time') ?? '').trim();
+		const timeMs = time ? parseTime(time) : undefined;
+		if (timeMs === null) return fail(400, { id, timeError: 'Use a time like 1:29.04' });
+		await setStatus(id, 'approved', timeMs);
 	},
 	reject: async ({ request, cookies }) => {
 		requireAdmin(cookies);

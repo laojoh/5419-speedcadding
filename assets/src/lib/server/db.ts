@@ -10,7 +10,10 @@ export interface Submission {
 	name: string;
 	team: string;
 	challengeId: string;
+	/** Official time: what the runner entered, until an admin times the video on approval. */
 	timeMs: number;
+	/** The runner's own time, kept once an admin sets a different official time. */
+	claimedMs?: number;
 	videoUrl: string;
 	cadUrl: string;
 	notes: string;
@@ -59,16 +62,18 @@ export function localDate(d = new Date()) {
 export const today = () => localDate();
 
 /**
- * The day a challenge's week ends (exclusive): when the next week's challenges start,
- * or 7 days after it started if nothing newer is scheduled.
+ * The day a week ends (exclusive): 7 days after it starts, or sooner if the next week's
+ * challenges start before that. `weeks` is every challenge's week, scheduled ones included.
  */
+function endOfWeek(week: string, weeks: string[]) {
+	const sevenDays = addDays(week, 7);
+	const next = weeks.filter((w) => w > week).sort()[0];
+	return next && next < sevenDays ? next : sevenDays;
+}
+
 export async function weekEnd(challenge: Challenge) {
 	const { challenges } = await load();
-	const next = challenges
-		.map((c) => c.week)
-		.filter((w) => w > challenge.week)
-		.sort()[0];
-	return next ?? addDays(challenge.week, 7);
+	return endOfWeek(challenge.week, challenges.map((c) => c.week));
 }
 
 /** Whether a run was submitted before the challenge's week ended. */
@@ -89,15 +94,20 @@ export async function getChallenge(id: string, { includeScheduled = false } = {}
 	return c && (includeScheduled || c.week <= today()) ? c : undefined;
 }
 
-/** Published challenges split into the current week and older weeks (newest first). */
+/**
+ * Published challenges split into the current week (null once its 7 days are up and nothing
+ * newer has started) and older weeks, newest first.
+ */
 export async function challengesByWeek() {
+	const allWeeks = (await load()).challenges.map((c) => c.week);
 	const weeks = new Map<string, Challenge[]>();
 	for (const c of await listChallenges()) {
 		if (!weeks.has(c.week)) weeks.set(c.week, []);
 		weeks.get(c.week)!.push(c);
 	}
-	const [current, ...archive] = [...weeks].map(([week, challenges]) => ({ week, challenges }));
-	return { current: current ?? null, archive };
+	const all = [...weeks].map(([week, challenges]) => ({ week, challenges }));
+	const current = all[0] && today() < endOfWeek(all[0].week, allWeeks) ? all[0] : null;
+	return { current, archive: current ? all.slice(1) : all };
 }
 
 export function addChallenge(c: Omit<Challenge, 'id' | 'createdAt'>) {
@@ -151,11 +161,17 @@ export function addSubmission(s: Omit<Submission, 'id' | 'status' | 'submittedAt
 	});
 }
 
-export function setStatus(id: string, status: Status) {
+/** Sets a run's status. Passing `timeMs` also records it as the official time. */
+export function setStatus(id: string, status: Status, timeMs?: number) {
 	return update((data) => {
 		const sub = data.submissions.find((s) => s.id === id);
-		if (sub) sub.status = status;
-		return !!sub;
+		if (!sub) return false;
+		sub.status = status;
+		if (timeMs !== undefined && timeMs !== sub.timeMs) {
+			sub.claimedMs ??= sub.timeMs;
+			sub.timeMs = timeMs;
+		}
+		return true;
 	});
 }
 

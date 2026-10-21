@@ -1,21 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import TimingTool from '#lib/components/TimingTool.svelte';
 	import { formatTime } from '#lib/time.ts';
+	import { youtubeId } from '#lib/youtube.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
-
-	/** YouTube links get an inline player so reviewers don't have to leave the page. */
-	function youtubeId(url: string) {
-		try {
-			const u = new URL(url);
-			if (u.hostname === 'youtu.be') return u.pathname.slice(1);
-			if (u.hostname.endsWith('youtube.com')) {
-				return u.searchParams.get('v') ?? u.pathname.match(/\/(?:shorts|embed|live)\/([\w-]+)/)?.[1] ?? null;
-			}
-		} catch {}
-		return null;
-	}
 
 	const when = (iso: string) => new Date(iso).toLocaleString();
 	const title = (id: string) => data.titles[id]?.title ?? 'Deleted challenge';
@@ -45,7 +35,7 @@
 			<div class="item">
 				<div class="info">
 					<div class="muted">{title(s.challengeId)}</div>
-					<div class="big mono">{formatTime(s.timeMs)}</div>
+					<div class="big mono">{formatTime(s.timeMs)} <span class="muted small">claimed</span></div>
 					<div>{s.name} {#if s.team}<span class="muted mono">{s.team}</span>{/if}</div>
 					<div class="muted small">{when(s.submittedAt)}</div>
 					<div class="links">
@@ -54,7 +44,7 @@
 					</div>
 					{#if s.notes}<p class="notes">“{s.notes}”</p>{/if}
 					<div class="actions">
-						<form method="POST" action="?/approve" use:enhance>
+						<form method="POST" action="?/approve" id="approve-{s.id}" use:enhance>
 							<input type="hidden" name="id" value={s.id} />
 							<button class="btn small">Approve</button>
 						</form>
@@ -65,12 +55,12 @@
 					</div>
 				</div>
 				{#if yt}
-					<iframe
-						src="https://www.youtube-nocookie.com/embed/{yt}"
-						title="Run video from {s.name}"
-						allow="encrypted-media; picture-in-picture; fullscreen"
-						loading="lazy"
-					></iframe>
+					<TimingTool
+						videoId={yt}
+						claimedMs={s.timeMs}
+						formId="approve-{s.id}"
+						error={form && 'timeError' in form && form.id === s.id ? form.timeError : undefined}
+					/>
 				{/if}
 			</div>
 		{/each}
@@ -89,7 +79,10 @@
 							<td><span class="status {s.status}">{s.status}</span></td>
 							<td>{s.name} <span class="muted mono">{s.team}</span></td>
 							<td>{title(s.challengeId)}</td>
-							<td class="time"><a href={s.videoUrl} target="_blank" rel="noopener noreferrer">{formatTime(s.timeMs)}</a></td>
+							<td class="time">
+								<a href={s.videoUrl} target="_blank" rel="noopener noreferrer">{formatTime(s.timeMs)}</a>
+								{#if s.claimedMs !== undefined}<span class="muted small">claimed {formatTime(s.claimedMs)}</span>{/if}
+							</td>
 							<td class="row-actions">
 								<form method="POST" action={s.status === 'approved' ? '?/reject' : '?/approve'} use:enhance>
 									<input type="hidden" name="id" value={s.id} />
@@ -138,7 +131,7 @@
 		border-bottom: 1px solid var(--border);
 	}
 
-	.item:not(:has(iframe)) {
+	.item:not(:has(.tool)) {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
@@ -183,14 +176,6 @@
 	.row-actions {
 		margin: 0;
 		justify-content: flex-end;
-	}
-
-	iframe {
-		width: 100%;
-		aspect-ratio: 16 / 9;
-		border: 0;
-		border-radius: 4px;
-		background: #000;
 	}
 
 	.reviewed-head {

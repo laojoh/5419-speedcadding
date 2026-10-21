@@ -3,6 +3,7 @@ import { formatWeek } from '#lib/challenges.ts';
 import { isUrl } from '#lib/server/challengeForm.ts';
 import { addSubmission, challengesByWeek, getChallenge } from '#lib/server/db.ts';
 import { parseTime } from '#lib/time.ts';
+import { youtubeId } from '#lib/youtube.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -38,7 +39,7 @@ export const actions = {
 		if (!challenge) errors.challengeId = 'Pick a challenge.';
 		const timeMs = parseTime(values.time);
 		if (timeMs === null) errors.time = 'Use a time like 4:32.10';
-		if (!isUrl(values.videoUrl)) errors.videoUrl = 'Paste a link to your video.';
+		if (!youtubeId(values.videoUrl)) errors.videoUrl = 'Paste a YouTube link, like https://youtu.be/…';
 		if (values.cadUrl && !isUrl(values.cadUrl)) errors.cadUrl = 'That doesn’t look like a link.';
 		if (values.notes.length > 500) errors.notes = 'Keep notes under 500 characters.';
 

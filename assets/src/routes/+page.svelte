@@ -16,7 +16,7 @@
 			{/each}
 		</div>
 	{:else}
-		<p class="muted">No challenges posted yet. Check back soon.</p>
+		<p class="muted">No challenges posted this week yet. Check back soon.</p>
 	{/if}
 
 	{#if data.archiveCount > 0}
