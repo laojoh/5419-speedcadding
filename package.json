@@ -7,5 +7,10 @@
 		"build": "bun run --cwd=assets build",
 		"preview": "bun run --cwd=assets preview",
 		"check": "bun run --cwd=assets check"
+	},
+	"dependencies": {
+		"@upstash/redis": "^1.39.0",
+		"@vercel/speed-insights": "^2.0.0",
+		"vercel": "^65.0.0"
 	}
 }
