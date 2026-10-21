@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { difficultyLabel, fileUrl, isPdf, type Challenge } from '#lib/challenges.ts';
+	import { difficultyLabel, isPdf, type Challenge } from '#lib/challenges.ts';
 	import { formatTime } from '#lib/time.ts';
 
 	let { challenge: c, best }: { challenge: Challenge; best?: number | null } = $props();
@@ -10,7 +10,7 @@
 		{#if isPdf(c.drawing)}
 			<span class="muted mono">PDF drawing</span>
 		{:else}
-			<img src={fileUrl(c.drawing)} alt="" loading="lazy" />
+			<img src={c.drawing} alt="" loading="lazy" />
 		{/if}
 	</div>
 	<div class="meta">

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { DIFFICULTIES, fileUrl, type Challenge } from '#lib/challenges.ts';
+	import { DIFFICULTIES, type Challenge } from '#lib/challenges.ts';
 
 	interface Props {
 		action: string;
@@ -53,7 +53,7 @@
 		<label for="drawing">Technical drawing</label>
 		{#if existing}
 			<p class="current">
-				Current: <a href={fileUrl(existing.drawing)} target="_blank" rel="noopener noreferrer">view</a> · choose a file to replace it
+				Current: <a href={existing.drawing} target="_blank" rel="noopener noreferrer">view</a> · choose a file to replace it
 			</p>
 		{/if}
 		<input id="drawing" name="drawing" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required={!existing} />
@@ -64,7 +64,7 @@
 		<label for="assemblyDrawing">Assembly drawing <span class="muted">(optional)</span></label>
 		{#if existing?.assemblyDrawing}
 			<p class="current">
-				Current: <a href={fileUrl(existing.assemblyDrawing)} target="_blank" rel="noopener noreferrer">view</a>
+				Current: <a href={existing.assemblyDrawing} target="_blank" rel="noopener noreferrer">view</a>
 				<label class="inline"><input type="checkbox" name="removeAssembly" /> remove</label>
 			</p>
 		{/if}
@@ -78,7 +78,7 @@
 		{#if errors?.cadUrl}<p class="error">{errors.cadUrl}</p>{/if}
 	</div>
 
-	<p class="muted hint">PNG, JPG, WebP or PDF, up to 20 MB. Challenges stay hidden until their week starts.</p>
+	<p class="muted hint">PNG, JPG, WebP or PDF, up to 4 MB. On the live site, new drawings appear after Vercel redeploys (about a minute). Challenges stay hidden until their week starts.</p>
 
 	<button class="btn" disabled={saving}>{saving ? 'Saving…' : submitLabel}</button>
 </form>

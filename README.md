@@ -30,15 +30,33 @@ The app lives in `assets/`; the root `package.json` just forwards `dev`, `build`
 
 ## Weekly challenges
 
-Each challenge has a "week of" date. The newest week that has started is "This week", and older weeks
-move to the archive automatically. A challenge with a future date stays hidden until then, so you can
-schedule weeks ahead.
+Each challenge has a "week of" date. A week lasts 7 days (or until the next week starts, if sooner),
+then moves to the archive. A challenge with a future date stays hidden until then, so you can schedule
+weeks ahead. Dates use Berkeley time (America/Los_Angeles).
 
-Drawings can be PNG, JPG, WebP or PDF, up to 20 MB.
+Drawings can be PNG, JPG, WebP or PDF, up to 4 MB.
 
 ## Data
 
-Challenges and runs are saved to `assets/data/db.json`, and drawings to `assets/data/uploads/`
-(both gitignored). Back up the `data` folder. Because it's on disk, deploy to a host with a
-persistent disk (a VPS, Railway, Fly.io, etc.), not a serverless platform like Vercel or Netlify.
-If you use `@sveltejs/adapter-node`, set `BODY_SIZE_LIMIT=25M` so drawing uploads aren't rejected.
+- **Challenges and runs:** Upstash Redis when `KV_REST_API_URL`/`KV_REST_API_TOKEN` (or
+  `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) are set; otherwise `assets/data/db.json`
+  (gitignored), which is what local dev uses.
+- **Drawings:** files in `assets/static/images/`, served at `/images/...`. When `GITHUB_TOKEN` is set,
+  admin uploads are committed to the repo through the GitHub API and appear once Vercel redeploys
+  (about a minute). Without it, uploads are written straight to the folder; commit them yourself.
+
+## Deploying on Vercel
+
+1. **Root directory:** in Project Settings → Build and Deployment, Root Directory should be `assets`
+   (it already is if the site deploys).
+2. **Redis:** Storage (or Marketplace) → add **Upstash for Redis** (free plan) and connect it to the
+   project. That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically.
+3. **GitHub token:** on GitHub, Settings → Developer settings → Fine-grained tokens → Generate. Pick
+   only this repository, and under Repository permissions set **Contents: Read and write**.
+4. **Environment variables** (Project Settings → Environment Variables, Production):
+   - `ADMIN_PASSWORD`: a strong password, never committed anywhere
+   - `GITHUB_TOKEN`: the token from step 3
+   - `GITHUB_REPO` / `GITHUB_BRANCH`: only if not `laojoh/5419-speedcadding` / `main`
+5. **Redeploy** so the new variables take effect.
+
+Because uploads commit to `main` on GitHub, run `git pull` before you push your own changes.

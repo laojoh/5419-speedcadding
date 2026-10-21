@@ -1,9 +1,19 @@
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DATA_DIR } from '$app/env/private';
+import { GITHUB_BRANCH, GITHUB_REPO, GITHUB_TOKEN } from '$app/env/private';
 
-const dir = join(DATA_DIR, 'uploads');
-export const MAX_UPLOAD_MB = 20;
+/**
+ * Drawings live in static/images and are served at /images/<name>.
+ * With GITHUB_TOKEN set (Vercel), uploads are committed to the repo and show up once Vercel
+ * redeploys. Without it (local dev), they're written straight to the folder.
+ */
+const FOLDER = 'static/images';
+const REPO_FOLDER = `assets/${FOLDER}`;
+
+/** Vercel rejects request bodies over 4.5 MB, so keep uploads under that. */
+export const MAX_UPLOAD_MB = 4;
+
+export const commitsToGitHub = !!GITHUB_TOKEN;
 
 // SVG is left out on purpose: it can carry scripts.
 const TYPES: Record<string, { ext: string; magic: number[] }> = {
@@ -13,11 +23,7 @@ const TYPES: Record<string, { ext: string; magic: number[] }> = {
 	'application/pdf': { ext: 'pdf', magic: [0x25, 0x50, 0x44, 0x46] }
 };
 
-const CONTENT_TYPES: Record<string, string> = Object.fromEntries(
-	Object.entries(TYPES).map(([mime, { ext }]) => [ext, mime])
-);
-
-export const NAME_PATTERN = /^[a-f0-9-]{36}\.(png|jpg|webp|pdf)$/;
+const PATH_PATTERN = /^\/images\/([a-z0-9-]+\.(png|jpg|webp|pdf))$/;
 
 /** Returns an error message, or null if the file is an acceptable drawing. */
 export async function checkUpload(file: File | null): Promise<string | null> {
@@ -30,27 +36,63 @@ export async function checkUpload(file: File | null): Promise<string | null> {
 	return null;
 }
 
-/** Saves an upload already passed through checkUpload and returns its stored file name. */
-export async function saveUpload(file: File) {
-	const type = TYPES[file.type];
-	const bytes = new Uint8Array(await file.arrayBuffer());
-	const name = `${crypto.randomUUID()}.${type.ext}`;
-	await mkdir(dir, { recursive: true });
-	await writeFile(join(dir, name), bytes);
-	return name;
-}
-
-export async function readUpload(name: string) {
-	if (!NAME_PATTERN.test(name)) return null;
-	try {
-		const body = await readFile(join(dir, name));
-		return { body, type: CONTENT_TYPES[name.split('.').pop()!] };
-	} catch {
-		return null;
+async function github(path: string, init: RequestInit = {}) {
+	const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
+		...init,
+		headers: {
+			Authorization: `Bearer ${GITHUB_TOKEN}`,
+			Accept: 'application/vnd.github+json',
+			'X-GitHub-Api-Version': '2022-11-28',
+			'User-Agent': '5419-speedcadding'
+		}
+	});
+	if (!res.ok && res.status !== 404) {
+		const { message } = await res.json().catch(() => ({ message: res.statusText }));
+		throw new Error(`GitHub said ${res.status}: ${message}`);
 	}
+	return res;
 }
 
-export async function removeUpload(name: string) {
-	if (!NAME_PATTERN.test(name)) return;
-	await unlink(join(dir, name)).catch(() => {});
+/** Saves a drawing already passed through checkUpload. Returns its public path, e.g. /images/gusset-1a2b3c.png */
+export async function saveDrawing(file: File, title: string) {
+	const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'drawing';
+	const name = `${slug}-${crypto.randomUUID().slice(0, 6)}.${TYPES[file.type].ext}`;
+	const bytes = new Uint8Array(await file.arrayBuffer());
+
+	if (commitsToGitHub) {
+		await github(`${REPO_FOLDER}/${name}`, {
+			method: 'PUT',
+			body: JSON.stringify({
+				message: `Add drawing ${name}`,
+				content: Buffer.from(bytes).toString('base64'),
+				branch: GITHUB_BRANCH
+			})
+		});
+	} else {
+		await mkdir(FOLDER, { recursive: true });
+		await writeFile(join(FOLDER, name), bytes);
+	}
+	return `/images/${name}`;
+}
+
+/** Removes a drawing saved by saveDrawing. Never throws: a leftover file is harmless. */
+export async function removeDrawing(path: string) {
+	const name = path.match(PATH_PATTERN)?.[1];
+	if (!name) return;
+	try {
+		if (commitsToGitHub) {
+			const file = `${REPO_FOLDER}/${name}`;
+			const res = await github(`${file}?ref=${GITHUB_BRANCH}`);
+			if (res.status === 404) return;
+			const { sha } = await res.json();
+			await github(file, {
+				method: 'DELETE',
+				body: JSON.stringify({ message: `Remove drawing ${name}`, sha, branch: GITHUB_BRANCH })
+			});
+		} else {
+			await unlink(join(FOLDER, name));
+		}
+	} catch (e) {
+		console.warn(`Couldn't remove drawing ${name}:`, e);
+	}
 }

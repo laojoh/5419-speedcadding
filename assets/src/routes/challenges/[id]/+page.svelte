@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Leaderboard from '#lib/components/Leaderboard.svelte';
-	import { addDays, difficultyLabel, fileUrl, formatWeek, isPdf } from '#lib/challenges.ts';
+	import { addDays, difficultyLabel, formatWeek, isPdf } from '#lib/challenges.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -37,12 +37,12 @@
 	{#each drawings as d (d.file)}
 		<figure>
 			{#if isPdf(d.file)}
-				<object data={fileUrl(d.file)} type="application/pdf" title={d.label}>
-					<a href={fileUrl(d.file)} target="_blank" rel="noopener noreferrer">Open {d.label.toLowerCase()} (PDF)</a>
+				<object data={d.file} type="application/pdf" title={d.label}>
+					<a href={d.file} target="_blank" rel="noopener noreferrer">Open {d.label.toLowerCase()} (PDF)</a>
 				</object>
 			{:else}
-				<a href={fileUrl(d.file)} target="_blank" rel="noopener noreferrer">
-					<img src={fileUrl(d.file)} alt="{d.label} for {c.title}" />
+				<a href={d.file} target="_blank" rel="noopener noreferrer">
+					<img src={d.file} alt="{d.label} for {c.title}" />
 				</a>
 			{/if}
 			{#if drawings.length > 1}<figcaption class="muted">{d.label}</figcaption>{/if}

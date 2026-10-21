@@ -1,4 +1,5 @@
-import { isDifficulty, type Difficulty } from '#lib/challenges.ts';
+import { addDays, isDifficulty, type Difficulty } from '#lib/challenges.ts';
+import { today } from './db.ts';
 import { checkUpload } from './files.ts';
 
 export interface ChallengeFormValues {
@@ -54,7 +55,8 @@ export async function readChallengeForm(form: FormData, requireDrawing: boolean)
 
 /** Monday of the current week as YYYY-MM-DD, the default for new challenges. */
 export function thisMonday() {
-	const d = new Date();
-	d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	const t = today();
+	const [y, m, d] = t.split('-').map(Number);
+	const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+	return addDays(t, -((weekday + 6) % 7));
 }

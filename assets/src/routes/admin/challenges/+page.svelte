@@ -11,7 +11,10 @@
 
 <h2>New challenge</h2>
 {#if form && 'created' in form}
-	<p class="saved">Added “{form.created}”.</p>
+	<p class="saved">
+		Added “{form.created}”.{#if form.redeploying}
+			The drawing was committed to GitHub and will show up once Vercel redeploys (about a minute).{/if}
+	</p>
 {/if}
 <ChallengeForm
 	action="?/create"

@@ -1,7 +1,5 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { DATA_DIR } from '$app/env/private';
 import { addDays, byDifficulty, type Challenge } from '#lib/challenges.ts';
+import { store } from './store.ts';
 
 export type Status = 'pending' | 'approved' | 'rejected';
 
@@ -21,45 +19,15 @@ export interface Submission {
 	submittedAt: string;
 }
 
-interface Data {
-	challenges: Challenge[];
-	submissions: Submission[];
-}
+// Weeks roll over on Berkeley time, whatever timezone the server runs in (Vercel uses UTC).
+const dateFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' });
 
-const file = join(DATA_DIR, 'db.json');
-
-async function load(): Promise<Data> {
-	try {
-		const data = JSON.parse(await readFile(file, 'utf8'));
-		return { challenges: data.challenges ?? [], submissions: data.submissions ?? [] };
-	} catch (e) {
-		if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { challenges: [], submissions: [] };
-		throw e;
-	}
-}
-
-// Serialize writes so two requests arriving at once don't overwrite each other.
-let queue: Promise<unknown> = Promise.resolve();
-
-function update<T>(fn: (data: Data) => T): Promise<T> {
-	const run = queue.then(async () => {
-		const data = await load();
-		const result = fn(data);
-		await mkdir(DATA_DIR, { recursive: true });
-		await writeFile(file + '.tmp', JSON.stringify(data, null, '\t'));
-		await rename(file + '.tmp', file);
-		return result;
-	});
-	queue = run.catch(() => {});
-	return run;
-}
-
-/** A date as YYYY-MM-DD in the server's timezone (defaults to today). */
-export function localDate(d = new Date()) {
-	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+/** A date as YYYY-MM-DD in the team's timezone (defaults to today). */
+export const localDate = (d = new Date()) => dateFormat.format(d);
 
 export const today = () => localDate();
+
+const allChallenges = () => store.all<Challenge>('challenges');
 
 /**
  * The day a week ends (exclusive): 7 days after it starts, or sooner if the next week's
@@ -72,8 +40,7 @@ function endOfWeek(week: string, weeks: string[]) {
 }
 
 export async function weekEnd(challenge: Challenge) {
-	const { challenges } = await load();
-	return endOfWeek(challenge.week, challenges.map((c) => c.week));
+	return endOfWeek(challenge.week, (await allChallenges()).map((c) => c.week));
 }
 
 /** Whether a run was submitted before the challenge's week ended. */
@@ -82,15 +49,14 @@ export const duringWeek = (end: string) => (s: Submission) => localDate(new Date
 // Challenges
 
 export async function listChallenges({ includeScheduled = false } = {}) {
-	const { challenges } = await load();
 	const now = today();
-	return challenges
+	return (await allChallenges())
 		.filter((c) => includeScheduled || c.week <= now)
 		.sort((a, b) => b.week.localeCompare(a.week) || byDifficulty(a, b));
 }
 
 export async function getChallenge(id: string, { includeScheduled = false } = {}) {
-	const c = (await load()).challenges.find((c) => c.id === id);
+	const c = (await allChallenges()).find((c) => c.id === id);
 	return c && (includeScheduled || c.week <= today()) ? c : undefined;
 }
 
@@ -99,86 +65,83 @@ export async function getChallenge(id: string, { includeScheduled = false } = {}
  * newer has started) and older weeks, newest first.
  */
 export async function challengesByWeek() {
-	const allWeeks = (await load()).challenges.map((c) => c.week);
+	const challenges = await allChallenges();
+	const now = today();
 	const weeks = new Map<string, Challenge[]>();
-	for (const c of await listChallenges()) {
+	for (const c of challenges
+		.filter((c) => c.week <= now)
+		.sort((a, b) => b.week.localeCompare(a.week) || byDifficulty(a, b))) {
 		if (!weeks.has(c.week)) weeks.set(c.week, []);
 		weeks.get(c.week)!.push(c);
 	}
 	const all = [...weeks].map(([week, challenges]) => ({ week, challenges }));
-	const current = all[0] && today() < endOfWeek(all[0].week, allWeeks) ? all[0] : null;
+	const allWeeks = challenges.map((c) => c.week);
+	const current = all[0] && now < endOfWeek(all[0].week, allWeeks) ? all[0] : null;
 	return { current, archive: current ? all.slice(1) : all };
 }
 
-export function addChallenge(c: Omit<Challenge, 'id' | 'createdAt'>) {
-	return update((data) => {
-		const slug = c.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
-		const challenge: Challenge = {
-			...c,
-			id: `${slug || 'challenge'}-${crypto.randomUUID().slice(0, 6)}`,
-			createdAt: new Date().toISOString()
-		};
-		data.challenges.push(challenge);
-		return challenge;
-	});
+export async function addChallenge(c: Omit<Challenge, 'id' | 'createdAt'>) {
+	const slug = c.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+	const challenge: Challenge = {
+		...c,
+		id: `${slug || 'challenge'}-${crypto.randomUUID().slice(0, 6)}`,
+		createdAt: new Date().toISOString()
+	};
+	await store.put('challenges', challenge);
+	return challenge;
 }
 
-export function updateChallenge(id: string, changes: Partial<Omit<Challenge, 'id' | 'createdAt'>>) {
-	return update((data) => {
-		const c = data.challenges.find((c) => c.id === id);
-		if (c) Object.assign(c, changes);
-		return c;
-	});
+export async function updateChallenge(id: string, changes: Partial<Omit<Challenge, 'id' | 'createdAt'>>) {
+	const c = (await allChallenges()).find((c) => c.id === id);
+	if (!c) return undefined;
+	const updated = { ...c, ...changes };
+	await store.put('challenges', updated);
+	return updated;
 }
 
-/** Deletes the challenge and its runs. Returns the removed challenge so its files can be cleaned up. */
-export function deleteChallenge(id: string) {
-	return update((data) => {
-		const c = data.challenges.find((c) => c.id === id);
-		data.challenges = data.challenges.filter((c) => c.id !== id);
-		data.submissions = data.submissions.filter((s) => s.challengeId !== id);
-		return c;
-	});
+/** Deletes the challenge and its runs. Returns the removed challenge so its drawings can be cleaned up. */
+export async function deleteChallenge(id: string) {
+	const c = (await allChallenges()).find((c) => c.id === id);
+	if (!c) return undefined;
+	const runs = (await listSubmissions()).filter((s) => s.challengeId === id);
+	await store.remove('submissions', runs.map((s) => s.id));
+	await store.remove('challenges', [id]);
+	return c;
 }
 
 // Submissions
 
 export async function listSubmissions(status?: Status) {
-	const { submissions } = await load();
+	const submissions = await store.all<Submission>('submissions');
 	return status ? submissions.filter((s) => s.status === status) : submissions;
 }
 
-export function addSubmission(s: Omit<Submission, 'id' | 'status' | 'submittedAt'>) {
-	return update((data) => {
-		const sub: Submission = {
-			...s,
-			id: crypto.randomUUID(),
-			status: 'pending',
-			submittedAt: new Date().toISOString()
-		};
-		data.submissions.push(sub);
-		return sub;
-	});
+export async function addSubmission(s: Omit<Submission, 'id' | 'status' | 'submittedAt'>) {
+	const sub: Submission = {
+		...s,
+		id: crypto.randomUUID(),
+		status: 'pending',
+		submittedAt: new Date().toISOString()
+	};
+	await store.put('submissions', sub);
+	return sub;
 }
 
 /** Sets a run's status. Passing `timeMs` also records it as the official time. */
-export function setStatus(id: string, status: Status, timeMs?: number) {
-	return update((data) => {
-		const sub = data.submissions.find((s) => s.id === id);
-		if (!sub) return false;
-		sub.status = status;
-		if (timeMs !== undefined && timeMs !== sub.timeMs) {
-			sub.claimedMs ??= sub.timeMs;
-			sub.timeMs = timeMs;
-		}
-		return true;
-	});
+export async function setStatus(id: string, status: Status, timeMs?: number) {
+	const sub = (await listSubmissions()).find((s) => s.id === id);
+	if (!sub) return false;
+	sub.status = status;
+	if (timeMs !== undefined && timeMs !== sub.timeMs) {
+		sub.claimedMs ??= sub.timeMs;
+		sub.timeMs = timeMs;
+	}
+	await store.put('submissions', sub);
+	return true;
 }
 
-export function deleteSubmission(id: string) {
-	return update((data) => {
-		data.submissions = data.submissions.filter((s) => s.id !== id);
-	});
+export async function deleteSubmission(id: string) {
+	await store.remove('submissions', [id]);
 }
 
 export interface RankedEntry {

@@ -2,7 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { requireAdmin } from '#lib/server/auth.ts';
 import { readChallengeForm } from '#lib/server/challengeForm.ts';
 import { getChallenge, updateChallenge } from '#lib/server/db.ts';
-import { removeUpload, saveUpload } from '#lib/server/files.ts';
+import { removeDrawing, saveDrawing } from '#lib/server/files.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ cookies, params }) => {
@@ -31,16 +31,22 @@ export const actions = {
 			assemblyDrawing: challenge.assemblyDrawing
 		};
 		const stale: string[] = [];
-		if (f.drawing) {
-			changes.drawing = await saveUpload(f.drawing);
-			stale.push(challenge.drawing);
-		}
-		if (f.assemblyDrawing || form.get('removeAssembly')) {
-			changes.assemblyDrawing = f.assemblyDrawing ? await saveUpload(f.assemblyDrawing) : '';
-			stale.push(challenge.assemblyDrawing);
+		try {
+			if (f.drawing) {
+				changes.drawing = await saveDrawing(f.drawing, f.values.title);
+				stale.push(challenge.drawing);
+			}
+			if (f.assemblyDrawing || form.get('removeAssembly')) {
+				changes.assemblyDrawing = f.assemblyDrawing
+					? await saveDrawing(f.assemblyDrawing, `${f.values.title} assembly`)
+					: '';
+				stale.push(challenge.assemblyDrawing);
+			}
+		} catch (e) {
+			return fail(500, { values: f.values, errors: { drawing: `Couldn't save the drawing. ${(e as Error).message}` } });
 		}
 		await updateChallenge(challenge.id, changes);
-		await Promise.all(stale.map(removeUpload));
+		for (const path of stale) await removeDrawing(path);
 		redirect(303, '/admin/challenges');
 	}
 } satisfies Actions;

@@ -12,7 +12,7 @@ export interface Challenge {
 	difficulty: Difficulty;
 	/** First day of the challenge's week, YYYY-MM-DD. Hidden from the public until then. */
 	week: string;
-	/** Uploaded file names, served from /files/<name>. */
+	/** Public paths of the drawings in static/images, e.g. /images/gusset-1a2b3c.png */
 	drawing: string;
 	assemblyDrawing: string;
 	cadUrl: string;
@@ -30,7 +30,6 @@ export function difficultyLabel(d: Difficulty) {
 const ORDER: Record<Difficulty, number> = { easy: 0, medium: 1, hard: 2 };
 export const byDifficulty = (a: Challenge, b: Challenge) => ORDER[a.difficulty] - ORDER[b.difficulty];
 
-export const fileUrl = (name: string) => `/files/${name}`;
 export const isPdf = (name: string) => name.endsWith('.pdf');
 
 /** Shift a YYYY-MM-DD date by some days. */
