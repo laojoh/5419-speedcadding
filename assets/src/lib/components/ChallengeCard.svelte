@@ -3,15 +3,18 @@
 	import { formatTime } from '#lib/time.ts';
 
 	let { challenge: c, best }: { challenge: Challenge; best?: number | null } = $props();
+
+	const thumb = $derived(c.drawings.find((d) => !isPdf(d)));
 </script>
 
 <a class="card" href="/challenges/{c.id}">
 	<div class="thumb">
-		{#if isPdf(c.drawing)}
-			<span class="muted mono">PDF drawing</span>
+		{#if thumb}
+			<img src={thumb} alt="" loading="lazy" />
 		{:else}
-			<img src={c.drawing} alt="" loading="lazy" />
+			<span class="muted mono">PDF drawing</span>
 		{/if}
+		{#if c.drawings.length > 1}<span class="parts mono">{c.drawings.length} parts</span>{/if}
 	</div>
 	<div class="meta">
 		<span class="level {c.difficulty}">{difficultyLabel(c.difficulty)}</span>
@@ -37,6 +40,7 @@
 	}
 
 	.thumb {
+		position: relative;
 		aspect-ratio: 4 / 3;
 		background: #fff;
 		display: grid;
@@ -47,6 +51,17 @@
 	.thumb .muted {
 		color: #666;
 		font-size: 0.8rem;
+	}
+
+	.parts {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		background: var(--bg);
+		color: var(--fg);
+		font-size: 0.7rem;
+		padding: 0.15rem 0.45rem;
+		border-radius: 4px;
 	}
 
 	img {

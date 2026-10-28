@@ -13,7 +13,7 @@
 	action=""
 	submitLabel="Save changes"
 	existing={c}
-	defaults={form?.values ?? { title: c.title, difficulty: c.difficulty, week: c.week, cadUrl: c.cadUrl }}
+	defaults={form?.values ?? { title: c.title, difficulty: c.difficulty, week: c.week, cadUrl: c.cadUrl, description: c.description }}
 	errors={form?.errors}
 />
 

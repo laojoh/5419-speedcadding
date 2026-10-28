@@ -13,13 +13,13 @@
 {#if form && 'created' in form}
 	<p class="saved">
 		Added “{form.created}”.{#if form.redeploying}
-			The drawing was committed to GitHub and will show up once Vercel redeploys (about a minute).{/if}
+			The drawings were committed to GitHub and will show up once Vercel redeploys (about a minute).{/if}
 	</p>
 {/if}
 <ChallengeForm
 	action="?/create"
 	submitLabel="Add challenge"
-	defaults={values ?? { title: '', difficulty: 'easy', week: data.defaultWeek, cadUrl: '' }}
+	defaults={values ?? { title: '', difficulty: 'easy', week: data.defaultWeek, cadUrl: '', description: '' }}
 	errors={form && 'errors' in form ? form.errors : undefined}
 />
 

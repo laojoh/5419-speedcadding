@@ -27,7 +27,15 @@ export const localDate = (d = new Date()) => dateFormat.format(d);
 
 export const today = () => localDate();
 
-const allChallenges = () => store.all<Challenge>('challenges');
+/** Challenges saved before multi-part drawings had a single `drawing` instead of `drawings`. */
+type StoredChallenge = Challenge & { drawing?: string };
+
+const allChallenges = async () =>
+	(await store.all<StoredChallenge>('challenges')).map(({ drawing, ...c }) => ({
+		...c,
+		drawings: c.drawings ?? (drawing ? [drawing] : []),
+		description: c.description ?? ''
+	}));
 
 /**
  * The day a week ends (exclusive): 7 days after it starts, or sooner if the next week's

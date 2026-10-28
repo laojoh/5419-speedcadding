@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { DIFFICULTIES, type Challenge } from '#lib/challenges.ts';
+	import { DIFFICULTIES, MAX_PARTS, type Challenge } from '#lib/challenges.ts';
 
 	interface Props {
 		action: string;
 		submitLabel: string;
-		defaults: { title: string; difficulty: string; week: string; cadUrl: string };
+		defaults: { title: string; difficulty: string; week: string; cadUrl: string; description: string };
 		/** Set when editing, to show the current files. */
 		existing?: Challenge;
 		errors?: Partial<Record<string, string>>;
@@ -50,14 +50,29 @@
 	</div>
 
 	<div>
-		<label for="drawing">Technical drawing</label>
-		{#if existing}
-			<p class="current">
-				Current: <a href={existing.drawing} target="_blank" rel="noopener noreferrer">view</a> · choose a file to replace it
-			</p>
+		<label for="drawings">Technical drawings <span class="muted">(one per part, up to {MAX_PARTS})</span></label>
+		{#if existing?.drawings.length}
+			<ul class="current">
+				{#each existing.drawings as path, i (path)}
+					<li>
+						<a href={path} target="_blank" rel="noopener noreferrer">Part {i + 1}</a>
+						<label class="inline"><input type="checkbox" name="removeDrawing" value={path} /> remove</label>
+					</li>
+				{/each}
+			</ul>
 		{/if}
-		<input id="drawing" name="drawing" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required={!existing} />
-		{#if errors?.drawing}<p class="error">{errors.drawing}</p>{/if}
+		<input
+			id="drawings"
+			name="drawings"
+			type="file"
+			multiple
+			accept="image/png,image/jpeg,image/webp,application/pdf"
+			required={!existing}
+		/>
+		<p class="current">
+			{existing ? 'Choose files to add more parts.' : 'Select several files at once for multi-part challenges, in part order.'}
+		</p>
+		{#if errors?.drawings}<p class="error">{errors.drawings}</p>{/if}
 	</div>
 
 	<div>
@@ -73,12 +88,24 @@
 	</div>
 
 	<div>
+		<label for="description">Description <span class="muted">(optional)</span></label>
+		<textarea
+			id="description"
+			name="description"
+			rows="3"
+			maxlength="1000"
+			placeholder="Units, which features matter, anything runners should know"
+		>{defaults.description}</textarea>
+		{#if errors?.description}<p class="error">{errors.description}</p>{/if}
+	</div>
+
+	<div>
 		<label for="cadUrl">CAD link <span class="muted">(optional)</span></label>
 		<input id="cadUrl" name="cadUrl" type="url" placeholder="https://cad.onshape.com/documents/…" value={defaults.cadUrl} />
 		{#if errors?.cadUrl}<p class="error">{errors.cadUrl}</p>{/if}
 	</div>
 
-	<p class="muted hint">PNG, JPG, WebP or PDF, up to 4 MB. On the live site, new drawings appear after Vercel redeploys (about a minute). Challenges stay hidden until their week starts.</p>
+	<p class="muted hint">PNG, JPG, WebP or PDF, up to 4 MB for all files together. On the live site, new drawings appear after Vercel redeploys (about a minute). Challenges stay hidden until their week starts.</p>
 
 	<button class="btn" disabled={saving}>{saving ? 'Saving…' : submitLabel}</button>
 </form>
@@ -115,6 +142,14 @@
 		margin-right: 0.75rem;
 		font: inherit;
 		cursor: pointer;
+	}
+
+	ul.current {
+		list-style: none;
+		padding: 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem 1.25rem;
 	}
 
 	.current {

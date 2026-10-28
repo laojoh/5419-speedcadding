@@ -12,10 +12,12 @@ export interface Challenge {
 	difficulty: Difficulty;
 	/** First day of the challenge's week, YYYY-MM-DD. Hidden from the public until then. */
 	week: string;
-	/** Public paths of the drawings in static/images, e.g. /images/gusset-1a2b3c.png */
-	drawing: string;
+	/** Part drawings in order (Part 1, Part 2, …): public paths in static/images, e.g. /images/gusset-1a2b3c.png */
+	drawings: string[];
 	assemblyDrawing: string;
 	cadUrl: string;
+	/** Optional notes shown under the title, e.g. units or which features matter. */
+	description: string;
 	createdAt: string;
 }
 
@@ -31,6 +33,14 @@ const ORDER: Record<Difficulty, number> = { easy: 0, medium: 1, hard: 2 };
 export const byDifficulty = (a: Challenge, b: Challenge) => ORDER[a.difficulty] - ORDER[b.difficulty];
 
 export const isPdf = (name: string) => name.endsWith('.pdf');
+
+export const MAX_PARTS = 6;
+
+/** Labelled drawings for display: Part 1…n (just "Drawing" if there's one part), then Assembly. */
+export function labelledDrawings(c: Challenge) {
+	const parts = c.drawings.map((file, i) => ({ label: c.drawings.length > 1 ? `Part ${i + 1}` : 'Drawing', file }));
+	return c.assemblyDrawing ? [...parts, { label: 'Assembly', file: c.assemblyDrawing }] : parts;
+}
 
 /** Shift a YYYY-MM-DD date by some days. */
 export function addDays(date: string, days: number) {

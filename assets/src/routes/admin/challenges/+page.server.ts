@@ -17,15 +17,20 @@ export const load: PageServerLoad = async ({ cookies }) => {
 export const actions = {
 	create: async ({ request, cookies }) => {
 		requireAdmin(cookies);
-		const f = await readChallengeForm(await request.formData(), true);
+		const f = await readChallengeForm(await request.formData());
 		if (!f.ok) return fail(400, { values: f.values, errors: f.errors });
 
-		let drawing: string, assemblyDrawing: string;
+		const drawings: string[] = [];
+		let assemblyDrawing = '';
 		try {
-			drawing = await saveDrawing(f.drawing!, f.values.title);
-			assemblyDrawing = f.assemblyDrawing ? await saveDrawing(f.assemblyDrawing, `${f.values.title} assembly`) : '';
+			for (const [i, file] of f.newDrawings.entries()) {
+				drawings.push(await saveDrawing(file, f.newDrawings.length > 1 ? `${f.values.title} part ${i + 1}` : f.values.title));
+			}
+			if (f.assemblyDrawing) assemblyDrawing = await saveDrawing(f.assemblyDrawing, `${f.values.title} assembly`);
 		} catch (e) {
-			return fail(500, { values: f.values, errors: { drawing: `Couldn't save the drawing. ${(e as Error).message}` } });
+			// Don't leave half an upload behind
+			for (const path of drawings) await removeDrawing(path);
+			return fail(500, { values: f.values, errors: { drawings: `Couldn't save the drawings. ${(e as Error).message}` } });
 		}
 
 		await addChallenge({
@@ -33,7 +38,8 @@ export const actions = {
 			difficulty: f.difficulty,
 			week: f.values.week,
 			cadUrl: f.values.cadUrl,
-			drawing,
+			description: f.values.description,
+			drawings,
 			assemblyDrawing
 		});
 		return { created: f.values.title, redeploying: commitsToGitHub };
@@ -42,8 +48,7 @@ export const actions = {
 		requireAdmin(cookies);
 		const removed = await deleteChallenge(String((await request.formData()).get('id') ?? ''));
 		if (removed) {
-			await removeDrawing(removed.drawing);
-			await removeDrawing(removed.assemblyDrawing);
+			for (const path of [...removed.drawings, removed.assemblyDrawing]) await removeDrawing(path);
 		}
 	}
 } satisfies Actions;

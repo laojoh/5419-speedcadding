@@ -1,16 +1,11 @@
 <script lang="ts">
 	import Leaderboard from '#lib/components/Leaderboard.svelte';
-	import { addDays, difficultyLabel, formatWeek, isPdf } from '#lib/challenges.ts';
+	import { addDays, difficultyLabel, formatWeek, isPdf, labelledDrawings } from '#lib/challenges.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 	const c = $derived(data.challenge);
-	const drawings = $derived(
-		[
-			{ label: 'Drawing', file: c.drawing },
-			{ label: 'Assembly', file: c.assemblyDrawing }
-		].filter((d) => d.file)
-	);
+	const drawings = $derived(labelledDrawings(c));
 	const lastDay = $derived(addDays(data.weekEnd, -1));
 </script>
 
@@ -25,6 +20,7 @@
 				<span class="level {c.difficulty}">{difficultyLabel(c.difficulty)}</span> · Week of {formatWeek(c.week)}
 			</p>
 			<h1>{c.title}</h1>
+			{#if c.description}<p class="description">{c.description}</p>{/if}
 		</div>
 		<div class="actions">
 			{#if c.cadUrl}
@@ -81,6 +77,13 @@
 
 	.head h1 {
 		margin: 0;
+	}
+
+	.description {
+		margin: 0.6rem 0 0;
+		max-width: 640px;
+		color: var(--fg-muted);
+		white-space: pre-line;
 	}
 
 	.sub {
